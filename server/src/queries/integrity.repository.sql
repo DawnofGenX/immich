@@ -35,19 +35,14 @@ order by
 limit
   $3
 
--- IntegrityRepository.getAssetPathsByPaths
+-- IntegrityRepository.getMediaFilePathsByPaths
 select
-  "asset"."originalPath",
-  "asset_file"."path" as "encodedVideoPath"
+  "path"
 from
-  "asset"
-  left join "asset_file" on "asset"."id" = "asset_file"."assetId"
-  and "asset_file"."type" = $1
+  "asset_file"
 where
-  (
-    "originalPath" in $2
-    or "asset_file"."path" in $3
-  )
+  "type" in ($1, $2)
+  and "path" in $3
 
 -- IntegrityRepository.getAssetFilePathsByPaths
 select
@@ -67,46 +62,24 @@ where
 
 -- IntegrityRepository.getTrackedPaths
 select
-  "asset"."originalPath" as "path"
-from
-  "asset"
-where
-  "asset"."originalPath" in $1
-union
-select
   "asset_file"."path" as "path"
 from
   "asset_file"
 where
-  "asset_file"."path" in $2
+  "asset_file"."path" in $1
 union
 select
   "person"."thumbnailPath" as "path"
 from
   "person"
 where
-  "person"."thumbnailPath" in $3
+  "person"."thumbnailPath" in $2
 
 -- IntegrityRepository.getAssetCount
 select
   count(*) as "count"
 from
   "asset"
-
--- IntegrityRepository.streamAllAssetPaths
-select
-  "originalPath",
-  "asset_file"."path" as "encodedVideoPath"
-from
-  "asset"
-  left join "asset_file" on "asset"."id" = "asset_file"."assetId"
-  and "asset_file"."type" = $1
-
--- IntegrityRepository.streamAllAssetFilePaths
-select
-  "path"
-from
-  "asset_file"
 
 -- IntegrityRepository.streamAssetPathsForMissingFiles
 select
@@ -117,11 +90,14 @@ select
 from
   (
     select
-      "asset"."originalPath" as "path",
+      "asset_original"."path" as "path",
       "asset"."id" as "assetId",
       null::uuid as "fileAssetId"
     from
       "asset"
+      inner join "asset_file" as "asset_original" on "asset_original"."assetId" = "asset"."id"
+      and "asset_original"."type" = 'original'
+      and "asset_original"."isEdited" = false
     where
       "asset"."deletedAt" is null
     union all
@@ -131,8 +107,10 @@ from
       "asset_file"."id" as "fileAssetId"
     from
       "asset_file"
+    where
+      "asset_file"."type" != $1
   ) as "allPaths"
-  left join "integrity_report" on "integrity_report"."type" = $1
+  left join "integrity_report" on "integrity_report"."type" = $2
   and (
     "integrity_report"."assetId" = "allPaths"."assetId"
     or "integrity_report"."fileAssetId" = "allPaths"."fileAssetId"
@@ -140,13 +118,16 @@ from
 
 -- IntegrityRepository.streamAssetChecksums
 select
-  "asset"."originalPath",
+  "asset_original"."path" as "originalPath",
   "asset"."checksum",
   "asset"."createdAt",
   "asset"."id" as "assetId",
   "integrity_report"."id" as "reportId"
 from
   "asset"
+  inner join "asset_file" as "asset_original" on "asset_original"."assetId" = "asset"."id"
+  and "asset_original"."type" = 'original'
+  and "asset_original"."isEdited" = false
   left join "integrity_report" on "integrity_report"."assetId" = "asset"."id"
   and "integrity_report"."type" = $1
 where

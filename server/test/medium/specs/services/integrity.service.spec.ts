@@ -435,6 +435,23 @@ describe(IntegrityService.name, () => {
       );
     });
 
+    it('should queue the original against its asset, not as a deletable file', async () => {
+      const { sut, ctx } = setup();
+      const job = ctx.getMock(JobRepository);
+      job.queue.mockResolvedValue(void 0);
+      const { user } = await ctx.newUser();
+      const { result: asset } = await ctx.newAsset({ ownerId: user.id, originalPath: '/path/to/original.jpg' });
+
+      await sut.handleMissingFilesQueueAll({ refreshOnly: false });
+
+      expect(job.queue).toHaveBeenCalledWith({
+        name: JobName.IntegrityMissingFiles,
+        data: {
+          items: [{ path: '/path/to/original.jpg', assetId: asset.id, fileAssetId: null, reportId: null }],
+        },
+      });
+    });
+
     it('should queue refresh jobs when refreshOnly is set', async () => {
       const { sut, ctx } = setup();
       const job = ctx.getMock(JobRepository);
@@ -1037,7 +1054,9 @@ describe(IntegrityService.name, () => {
         ]),
       );
 
-      await expect(defaultDatabase.selectFrom('asset_file').execute()).resolves.toEqual([]);
+      await expect(defaultDatabase.selectFrom('asset_file').where('id', '=', fileAssetId).execute()).resolves.toEqual(
+        [],
+      );
       await expect(defaultDatabase.selectFrom('integrity_report').execute()).resolves.toEqual([]);
     });
   });

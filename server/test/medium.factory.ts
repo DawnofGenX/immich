@@ -28,7 +28,7 @@ import { ApiKeyRepository } from 'src/repositories/api-key.repository.js';
 import { AssetEditRepository } from 'src/repositories/asset-edit.repository.js';
 import { AssetFileRepository } from 'src/repositories/asset-file.repository.js';
 import { AssetJobRepository } from 'src/repositories/asset-job.repository.js';
-import { AssetRepository } from 'src/repositories/asset.repository.js';
+import { AssetCreate, AssetRepository } from 'src/repositories/asset.repository.js';
 import { AuthChallengeRepository } from 'src/repositories/auth-challenge.repository.js';
 import { ClusterGroupRepository } from 'src/repositories/cluster-group.repository.js';
 import { ConfigRepository } from 'src/repositories/config.repository.js';
@@ -79,7 +79,6 @@ import { AssetFileTable } from 'src/schema/tables/asset-file.table.js';
 import { AssetJobStatusTable } from 'src/schema/tables/asset-job-status.table.js';
 import { AssetMetadataTable } from 'src/schema/tables/asset-metadata.table.js';
 import { AssetOcrTable } from 'src/schema/tables/asset-ocr.table.js';
-import { AssetTable } from 'src/schema/tables/asset.table.js';
 import { FaceSearchTable } from 'src/schema/tables/face-search.table.js';
 import { MemoryTable } from 'src/schema/tables/memory.table.js';
 import { PasskeyTable } from 'src/schema/tables/passkey.table.js';
@@ -209,7 +208,7 @@ export class MediumTestContext<S extends ClassConstructor<typeof BaseService> = 
     return { stack: { ...stack, primaryAssetId: assetIds[0] }, result };
   }
 
-  async newAsset(dto: Partial<Insertable<AssetTable>> = {}) {
+  async newAsset(dto: Partial<AssetCreate> = {}) {
     const asset = mediumFactory.assetInsert(dto);
     const result = await this.get(AssetRepository).create(asset);
     return { asset, result };
@@ -691,10 +690,10 @@ const newMockRepository = <T>(key: ClassConstructor<T>) => {
   }
 };
 
-const assetInsert = (asset: Partial<Insertable<AssetTable>> = {}) => {
+const assetInsert = (asset: Partial<AssetCreate> = {}) => {
   const id = asset.id || newUuid();
   const now = newDate();
-  const defaults: Insertable<AssetTable> = {
+  const defaults: AssetCreate = {
     originalFileName: '',
     checksum: randomBytes(32),
     checksumAlgorithm: ChecksumAlgorithm.sha1File,

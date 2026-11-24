@@ -173,16 +173,14 @@ where
     or "asset"."livePhotoVideoId" = any ("target"."ids")
   )
 
--- AccessRepository.assetFile.checkOwnerAccess
+-- AccessRepository.assetFile.getAssetIds
 select
-  "asset_file"."id"
+  "asset_file"."id",
+  "asset_file"."assetId"
 from
   "asset_file"
-  inner join "asset" on "asset"."id" = "asset_file"."assetId"
 where
-  "asset"."visibility" != $1
-  and "asset"."ownerId" = $2
-  and "asset_file"."id" in ($3)
+  "asset_file"."id" in ($1)
 
 -- AccessRepository.authDevice.checkOwnerAccess
 select

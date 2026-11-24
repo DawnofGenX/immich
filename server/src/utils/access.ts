@@ -1,4 +1,5 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { ASSET_FILE_PERMISSIONS } from 'src/constants.js';
 import { AuthSharedLink } from 'src/database.js';
 import { AuthDto } from 'src/dtos/auth.dto.js';
 import { PersonUserRole } from 'src/dtos/person.dto.js';
@@ -109,6 +110,16 @@ export const checkAccess = async (
     : checkOtherAccess(access, { auth, permission, ids: idSet });
 };
 
+const checkAssetFileAccess = async (
+  access: AccessRepository,
+  fileIds: Set<string>,
+  checkAssetAccess: (assetIds: Set<string>) => Promise<Set<string>>,
+) => {
+  const files = await access.assetFile.getAssetIds([...fileIds]);
+  const allowedAssetIds = await checkAssetAccess(new Set(files.map(({ assetId }) => assetId)));
+  return new Set(files.filter(({ assetId }) => allowedAssetIds.has(assetId)).map(({ id }) => id));
+};
+
 const checkSharedLinkAccess = async (
   access: AccessRepository,
   request: SharedLinkAccessRequest,
@@ -127,6 +138,18 @@ const checkSharedLinkAccess = async (
 
     case Permission.AssetDownload: {
       return sharedLink.allowDownload ? await access.asset.checkSharedLinkAccess(sharedLinkId, ids) : new Set();
+    }
+
+    case Permission.AssetFileRead:
+    case Permission.AssetFileDownload:
+    case Permission.AssetFileDelete: {
+      if (!sharedLink.showExif) {
+        return new Set();
+      }
+
+      return checkAssetFileAccess(access, ids, (assetIds) =>
+        checkSharedLinkAccess(access, { ...request, permission: ASSET_FILE_PERMISSIONS[permission], ids: assetIds }),
+      );
     }
 
     case Permission.AssetUpload: {
@@ -187,10 +210,6 @@ const checkOtherAccess = async (access: AccessRepository, request: OtherAccessRe
       return isOwner.union(isAlbum).union(isPartner);
     }
 
-    case Permission.AssetFileDownload: {
-      return access.assetFile.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
-    }
-
     case Permission.AssetView: {
       const isOwner = await access.asset.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
       const isAlbum = await access.asset.checkAlbumAccess(auth.user.id, ids.difference(isOwner));
@@ -236,8 +255,11 @@ const checkOtherAccess = async (access: AccessRepository, request: OtherAccessRe
     }
 
     case Permission.AssetFileRead:
+    case Permission.AssetFileDownload:
     case Permission.AssetFileDelete: {
-      return await access.assetFile.checkOwnerAccess(auth.user.id, ids, auth.session?.hasElevatedPermission);
+      return checkAssetFileAccess(access, ids, (assetIds) =>
+        checkOtherAccess(access, { ...request, permission: ASSET_FILE_PERMISSIONS[permission], ids: assetIds }),
+      );
     }
 
     case Permission.AlbumRead: {

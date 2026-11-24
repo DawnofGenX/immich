@@ -15,9 +15,10 @@ describe(AssetFileService.name, () => {
   });
 
   describe('delete', () => {
-    it('should not delete a sidecar file', async () => {
-      const file = AssetFileFactory.create({ type: AssetFileType.Sidecar });
-      mocks.access.assetFile.checkOwnerAccess.mockResolvedValue(new Set([file.id]));
+    it.each([AssetFileType.Sidecar, AssetFileType.Original])('should not delete a %s file', async (type) => {
+      const file = AssetFileFactory.create({ type });
+      mocks.access.assetFile.getAssetIds.mockResolvedValue([{ id: file.id, assetId: file.assetId }]);
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([file.assetId]));
       mocks.assetFile.get.mockResolvedValue(file);
 
       await expect(sut.delete(AuthFactory.create(), file.id)).rejects.toBeInstanceOf(BadRequestException);
@@ -29,7 +30,8 @@ describe(AssetFileService.name, () => {
     it('should tell the owner about the deleted file', async () => {
       const auth = AuthFactory.create();
       const file = AssetFileFactory.create();
-      mocks.access.assetFile.checkOwnerAccess.mockResolvedValue(new Set([file.id]));
+      mocks.access.assetFile.getAssetIds.mockResolvedValue([{ id: file.id, assetId: file.assetId }]);
+      mocks.access.asset.checkOwnerAccess.mockResolvedValue(new Set([file.assetId]));
       mocks.assetFile.get.mockResolvedValue(file);
       mocks.assetFile.delete.mockResolvedValue(true);
 

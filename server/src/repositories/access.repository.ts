@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { sql, type Kysely, type NotNull } from 'kysely';
 import { InjectKysely } from 'nestjs-kysely';
-import { ChunkedSet, DummyValue, GenerateSql } from 'src/decorators.js';
+import { ChunkedArray, ChunkedSet, DummyValue, GenerateSql } from 'src/decorators.js';
 import { PersonUserRole } from 'src/dtos/person.dto.js';
 import { AlbumUserRole, AssetVisibility } from 'src/enum.js';
 import { PersonId } from 'src/repositories/person.repository.js';
@@ -293,22 +293,14 @@ class AssetAccess {
 class AssetFileAccess {
   constructor(private db: Kysely<DB>) {}
 
-  @GenerateSql({ params: [DummyValue.UUID, DummyValue.UUID_SET] })
-  @ChunkedSet({ paramIndex: 1 })
-  async checkOwnerAccess(userId: string, fileIds: Set<string>, hasElevatedPermission: boolean | undefined) {
-    if (fileIds.size === 0) {
-      return new Set<string>();
-    }
-
+  @GenerateSql({ params: [[DummyValue.UUID]] })
+  @ChunkedArray()
+  getAssetIds(fileIds: string[]) {
     return this.db
       .selectFrom('asset_file')
-      .select('asset_file.id')
-      .innerJoin('asset', 'asset.id', 'asset_file.assetId')
-      .$if(!hasElevatedPermission, (eb) => eb.where('asset.visibility', '!=', AssetVisibility.Locked))
-      .where('asset.ownerId', '=', userId)
-      .where('asset_file.id', 'in', [...fileIds])
-      .execute()
-      .then((files) => new Set(files.map(({ id }) => id)));
+      .select(['asset_file.id', 'asset_file.assetId'])
+      .where('asset_file.id', 'in', fileIds)
+      .execute();
   }
 }
 

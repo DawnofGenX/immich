@@ -416,7 +416,7 @@
 
     if (
       asset.exifInfo?.projectionType === ProjectionType.EQUIRECTANGULAR ||
-      (asset.originalPath && asset.originalPath.toLowerCase().endsWith('.insp'))
+      asset.originalFileName.toLowerCase().endsWith('.insp')
     ) {
       return 'ImagePanaramaViewer';
     }

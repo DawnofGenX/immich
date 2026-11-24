@@ -65,6 +65,7 @@ export enum AssetFileType {
   Thumbnail = 'thumbnail',
   Sidecar = 'sidecar',
   EncodedVideo = 'encoded_video',
+  Original = 'original',
 }
 
 export const AssetFileTypeSchema = z.enum(AssetFileType).describe('Type of file').meta({ id: 'AssetFileType' });
@@ -490,11 +491,6 @@ export enum ManualJobName {
 
 export const ManualJobNameSchema = z.enum(ManualJobName).describe('Manual job name').meta({ id: 'ManualJobName' });
 
-export enum AssetPathType {
-  Original = 'original',
-  EncodedVideo = 'encoded_video',
-}
-
 export enum PersonPathType {
   Face = 'face',
 }
@@ -503,7 +499,7 @@ export enum UserPathType {
   Profile = 'profile',
 }
 
-export type PathType = AssetFileType | AssetPathType | PersonPathType | UserPathType;
+export type PathType = AssetFileType | PersonPathType | UserPathType;
 
 export enum TranscodePolicy {
   All = 'all',

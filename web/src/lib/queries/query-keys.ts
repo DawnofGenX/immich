@@ -12,6 +12,7 @@ import type {
   getMySharedLink,
   getSearchSuggestions,
   getUsersForPeople,
+  searchAssetFiles,
   searchMemories,
   searchPerson,
   searchPlaces,
@@ -64,6 +65,12 @@ export const QueryKeys = {
 
   // api keys
   apiKeys: () => ['api-keys'],
+
+  // asset files
+  assetFiles: (...params: [Omit<Parameters<typeof searchAssetFiles>[0], 'key' | 'slug'>?]) => [
+    'asset-files',
+    ...params,
+  ],
 
   // assets
   assetStatistics: (params: Parameters<typeof getAssetStatistics>[0]) => ['assets', 'statistics', params],
